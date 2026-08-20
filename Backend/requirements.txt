@@ -1,6 +1,7 @@
 fastapi>=0.136.0
-numpy>=2.2.0
-opencv-python>=4.13.0
-mediapipe>=0.10.0
+numpy>=1.26,<3
+# mediapipe is pinned: newer releases removed the legacy "mp.solutions"
+# API this app uses (see https://github.com/google-ai-edge/mediapipe/issues).
+mediapipe==0.10.14
 uvicorn[standard]>=0.49.0
 websockets>=16.0
