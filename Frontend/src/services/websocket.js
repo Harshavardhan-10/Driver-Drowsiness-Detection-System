@@ -34,11 +34,10 @@ class WebSocketService {
     return new Promise((resolve, reject) => {
       try {
         // Determine backend URL (support both development and production)
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // const host = process.env.REACT_APP_BACKEND_URL || 
-        //             `${window.location.hostname}:8000`;
-        const host = "localhost:8000";
-        
+        // Production: set VITE_API_URL at build time, e.g. https://drowsiness-api.onrender.com
+        const apiUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '');
+        const protocol = apiUrl.startsWith('https:') ? 'wss:' : 'ws:';
+        const host = apiUrl.replace(/^https?:\/\//, '');
         this.url = `${protocol}//${host}${endpoint}`;
 
         console.log(`[WebSocket] Connecting to: ${this.url}`);

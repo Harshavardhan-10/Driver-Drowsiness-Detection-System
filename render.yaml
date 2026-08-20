@@ -1,0 +1,32 @@
+# Render Blueprint — deploys the Driver Drowsiness Detection backend (free web
+# service) and the static frontend (free forever, always on).
+#
+# URLs after first deploy:
+#   Frontend: https://drowsiness-web.onrender.com
+#   API:      https://drowsiness-api.onrender.com
+# (adjust CORS_ORIGINS / VITE_API_URL if you rename services)
+
+services:
+  - type: web
+    name: drowsiness-api
+    runtime: python
+    rootDir: Backend
+    plan: free
+    healthCheckPath: /health
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.7
+      - key: CORS_ORIGINS
+        value: https://drowsiness-web.onrender.com
+
+  - type: web
+    name: drowsiness-web
+    runtime: static
+    rootDir: Frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: https://drowsiness-api.onrender.com

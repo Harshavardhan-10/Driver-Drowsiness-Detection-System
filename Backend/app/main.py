@@ -1,4 +1,5 @@
 import logging
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -18,15 +19,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for React frontend
+# Enable CORS for the React frontend.
+# Comma-separated list, e.g. CORS_ORIGINS=https://drowsiness-web.onrender.com
+default_origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+]
+cors_origins = [
+    origin.strip()
+    for origin in os.getenv("CORS_ORIGINS", "").split(",")
+    if origin.strip()
+] or default_origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173"
-    ],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
