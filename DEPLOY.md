@@ -30,7 +30,7 @@ gh repo create <your-name>/driver-drowsiness-detection --private --source=. --pu
 
 | Resource | Type | URL |
 |---|---|---|
-| `drowsiness-api` | Web service (free) | https://drowsiness-api.onrender.com |
+| `drowsiness-api` | Web service (free) | https://drowsiness-api-o7ju.onrender.com |
 | `drowsiness-web` | Static site (free) | https://drowsiness-web.onrender.com |
 
 The blueprint already wires the pieces together:

@@ -3,8 +3,10 @@
 #
 # URLs after first deploy:
 #   Frontend: https://drowsiness-web.onrender.com
-#   API:      https://drowsiness-api.onrender.com
-# (adjust CORS_ORIGINS / VITE_API_URL if you rename services)
+#   API:      https://drowsiness-api-o7ju.onrender.com
+# (Render appended a random suffix to the API URL because the canonical
+# "drowsiness-api" name was already taken — keep these two in sync if you
+# ever rename the services)
 
 services:
   - type: web
@@ -29,4 +31,4 @@ services:
     staticPublishPath: dist
     envVars:
       - key: VITE_API_URL
-        value: https://drowsiness-api.onrender.com
+        value: https://drowsiness-api-o7ju.onrender.com
