@@ -1,18 +1,153 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import Webcam from 'react-webcam';
 
-const WebcamFeed = ({ websocket, onFrameSent, isConnected }) => {
+// Video constraints for optimal capture performance
+const VIDEO_CONSTRAINTS = {
+  width: { ideal: 640 },
+  height: { ideal: 480 },
+  facingMode: 'user'
+};
+
+const WebcamFeed = ({ websocket, onFrameSent, isConnected, detection }) => {
   const webcamRef = useRef(null);
   const captureIntervalRef = useRef(null);
   const frameCountRef = useRef(0);
+  const canvasRef = useRef(null);
+  const wrapperRef = useRef(null);
+  const videoSizeRef = useRef({ width: 0, height: 0 });
   const [isCameraReady, setIsCameraReady] = useState(false);
 
-  // Calculate video constraints for optimal performance
-  const videoConstraints = {
-    width: { ideal: 640 },
-    height: { ideal: 480 },
-    facingMode: 'user'
-  };
+  /**
+   * Draw detection landmark points and outlines over the live feed.
+   *
+   * Landmarks arrive normalized (0-1) from the backend. The video is
+   * rendered with object-fit: cover, so coordinates are mapped through
+   * the cover transform before drawing.
+   */
+  const drawOverlay = useCallback(() => {
+    const canvas = canvasRef.current;
+    const wrapper = wrapperRef.current;
+
+    if (!canvas || !wrapper) return;
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const overlay = detection?.overlay;
+    if (!overlay) return;
+
+    // Intrinsic source frame size (falls back to ideal constraints)
+    const srcWidth = videoSizeRef.current.width || VIDEO_CONSTRAINTS.width.ideal;
+    const srcHeight = videoSizeRef.current.height || VIDEO_CONSTRAINTS.height.ideal;
+    if (!srcWidth || !srcHeight) return;
+
+    const dispWidth = wrapper.clientWidth;
+    const dispHeight = wrapper.clientHeight;
+    if (!dispWidth || !dispHeight) return;
+
+    // object-fit: cover mapping
+    const scale = Math.max(dispWidth / srcWidth, dispHeight / srcHeight);
+    const offsetX = (dispWidth - srcWidth * scale) / 2;
+    const offsetY = (dispHeight - srcHeight * scale) / 2;
+
+    const toDisplay = ([nx, ny]) => [
+      nx * srcWidth * scale + offsetX,
+      ny * srcHeight * scale + offsetY,
+    ];
+
+    const eyesOpen = (detection.ear ?? 0) >= 0.25;
+    const notYawning = (detection.mar ?? 0) <= 0.75;
+    const eyeColor = eyesOpen ? '#34d399' : '#fb7185';
+    const mouthColor = notYawning ? '#22d3ee' : '#fbbf24';
+
+    const drawGroup = (points, color) => {
+      if (!Array.isArray(points) || points.length === 0) return;
+
+      const pts = points.map(toDisplay);
+
+      // Outline polygon through all landmarks used for the metric
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+      ctx.closePath();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 8;
+      ctx.stroke();
+
+      // Individual landmark markers
+      pts.forEach(([x, y]) => {
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(7, 11, 20, 0.85)';
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      });
+
+      ctx.shadowBlur = 0;
+    };
+
+    drawGroup(overlay.left_eye, eyeColor);
+    drawGroup(overlay.right_eye, eyeColor);
+    drawGroup(overlay.mouth, mouthColor);
+  }, [detection]);
+
+  // Redraw whenever new detection results arrive (~10 FPS)
+  useEffect(() => {
+    drawOverlay();
+  }, [drawOverlay]);
+
+  // Keep canvas backing store in sync with displayed size
+  useEffect(() => {
+    const syncCanvasSize = () => {
+      const canvas = canvasRef.current;
+      const wrapper = wrapperRef.current;
+      if (!canvas || !wrapper) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const width = wrapper.clientWidth;
+      const height = wrapper.clientHeight;
+      if (!width || !height) return;
+
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+      canvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+      drawOverlay();
+    };
+
+    syncCanvasSize();
+
+    if (!('ResizeObserver' in window)) return undefined;
+
+    const observer = new ResizeObserver(syncCanvasSize);
+    if (wrapperRef.current) observer.observe(wrapperRef.current);
+    return () => observer.disconnect();
+  }, [isCameraReady, drawOverlay]);
+
+  // Track intrinsic frame size once metadata is available
+  useEffect(() => {
+    if (!isCameraReady) return undefined;
+
+    const updateVideoSize = () => {
+      const videoEl = webcamRef.current?.video;
+      if (videoEl && videoEl.videoWidth && videoEl.videoHeight) {
+        videoSizeRef.current = {
+          width: videoEl.videoWidth,
+          height: videoEl.videoHeight,
+        };
+      }
+    };
+
+    updateVideoSize();
+    const videoEl = webcamRef.current?.video;
+    videoEl?.addEventListener('loadedmetadata', updateVideoSize);
+    return () => videoEl?.removeEventListener('loadedmetadata', updateVideoSize);
+  }, [isCameraReady]);
 
   /**
    * Capture frame from webcam and convert to base64
@@ -110,11 +245,11 @@ const WebcamFeed = ({ websocket, onFrameSent, isConnected }) => {
 
   return (
     <div className="webcam-feed-container">
-      <div className="webcam-wrapper">
+      <div className="webcam-wrapper" ref={wrapperRef}>
         <Webcam
           ref={webcamRef}
           audio={false}
-          videoConstraints={videoConstraints}
+          videoConstraints={VIDEO_CONSTRAINTS}
           screenshotFormat="image/jpeg"
           onUserMedia={handleUserMediaReady}
           onUserMediaError={(error) => {
@@ -122,6 +257,12 @@ const WebcamFeed = ({ websocket, onFrameSent, isConnected }) => {
             setIsCameraReady(false);
           }}
           className="webcam-video"
+        />
+        {/* Landmark overlay (eyes / mouth points used for detection) */}
+        <canvas
+          ref={canvasRef}
+          className="webcam-overlay"
+          aria-hidden="true"
         />
       </div>
 
@@ -164,6 +305,13 @@ const WebcamFeed = ({ websocket, onFrameSent, isConnected }) => {
           height: auto;
           display: block;
           object-fit: contain;
+        }
+
+        .webcam-overlay {
+          position: absolute;
+          inset: 0;
+          z-index: 4;
+          pointer-events: none;
         }
 
         @keyframes pulse {

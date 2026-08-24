@@ -31,6 +31,7 @@ A real-time driver drowsiness detection system using computer vision and facial 
 - **Vite** - Build tool
 - **react-webcam** - Camera access
 - **react-router-dom** - Client-side routing
+- **lucide-react** - Icon library
 
 ##  Features
 
@@ -39,8 +40,8 @@ A real-time driver drowsiness detection system using computer vision and facial 
 - **Drowsiness Scoring** - 0-100 score based on eye closure duration and yawn frequency
 - **Three Alert Levels** - NORMAL → WARNING → DROWSY
 - **Audio Alarms** - Plays alarm sound when drowsiness is detected
+- **Live Landmark Overlay** - Outlines the exact eye and mouth landmark points used for EAR/MAR directly on the live camera feed
 - **Live Dashboard** - Real-time display of EAR, MAR, score, status, and yawn count
-- **Session Statistics** - Tracks frames processed, max score, alerts, and duration
 - **Automatic Reconnection** - WebSocket auto-reconnects on connection loss
 
 ## Project Structure
@@ -59,7 +60,8 @@ Drowsiness_Detection/
 │   └── requirements.txt       # Python dependencies
 ├── Frontend/
 │   ├── public/
-│   │   └── alarm.mp3          # Alarm sound file
+│   │   ├── alarm.mp3           # Alarm sound file
+│   │   └── research-paper.pdf  # Research paper (placeholder - replace with your own)
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── AlertBox.jsx    # Drowsiness alert overlay with alarm
@@ -198,14 +200,15 @@ The frontend starts at `http://localhost:5173` (default Vite port).
 ### Step 3: Use the Application
 
 1. Open `http://localhost:5173` in your browser
-2. Click **"Start Monitoring"** on the home page
+2. Click **"Start Detection"** on the home page
 3. Grant camera permission when prompted
-4. The dashboard will display real-time metrics:
+4. The monitoring console will display real-time metrics:
    - **EAR**: Eye Aspect Ratio
    - **MAR**: Mouth Aspect Ratio
    - **Score**: Drowsiness score (0-100)
    - **Status**: NORMAL / WARNING / DROWSY
    - **Yawn Count**: Number of yawns detected
+   - The eye and mouth landmarks used for these metrics are outlined live on the camera feed
 5. An alert box with an audio alarm triggers when the status reaches **DROWSY**
 
 ##  API Endpoints
@@ -243,9 +246,16 @@ The frontend starts at `http://localhost:5173` (default Vite port).
   "yawns": 2,
   "alert": false,
   "blink": false,
-  "yawn": false
+  "yawn": false,
+  "overlay": {
+    "left_eye":  [[0.31, 0.42], ...],
+    "right_eye": [[0.68, 0.41], ...],
+    "mouth":     [[0.49, 0.61], ...]
+  }
 }
 ```
+
+The `overlay` field contains the normalized (0-1) coordinates of the exact landmarks used for EAR/MAR, so the frontend can outline eyes and mouth on the live feed.
 
 ##  Configuration
 

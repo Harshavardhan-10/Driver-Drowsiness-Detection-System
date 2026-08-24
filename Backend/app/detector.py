@@ -20,8 +20,6 @@ class DrowsinessDetector:
         self.right_eye_indices = [362, 385, 387, 263, 373, 380]
         self.mouth_indices = [13, 14, 78, 308, 82, 312]
         self.drowsiness = DrowsinessEngine()
-
-
     def analyze_frame(self, frame):
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         results = self.face_mesh.process(rgb)        
@@ -52,6 +50,23 @@ class DrowsinessDetector:
             for i in self.mouth_indices
         ]
 
+        # Normalized landmark points (0-1) used for EAR/MAR, sent so the
+        # frontend can outline eyes and mouth on the live camera feed.
+        overlay = {
+            "left_eye": [
+                [round(landmarks[i].x, 3), round(landmarks[i].y, 3)]
+                for i in self.left_eye_indices
+            ],
+            "right_eye": [
+                [round(landmarks[i].x, 3), round(landmarks[i].y, 3)]
+                for i in self.right_eye_indices
+            ],
+            "mouth": [
+                [round(landmarks[i].x, 3), round(landmarks[i].y, 3)]
+                for i in self.mouth_indices
+            ],
+        }
+
         try:
             left_ear = calculate_ear(left_eye)
         except Exception as e:
@@ -69,6 +84,7 @@ class DrowsinessDetector:
             "mar": round(mar, 3),
             "blink": ear < 0.20,
             "yawn": mar > 0.65,
+            "overlay": overlay,
             **drowsiness_result
         }
             
