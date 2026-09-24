@@ -126,7 +126,7 @@ const Monitor = () => {
 
     try {
       await fetch(
-        "http://localhost:8000/detector/reset",
+        `${(import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '')}/detector/reset`,
         {
           method: "POST"
         }
@@ -223,7 +223,7 @@ const Monitor = () => {
               alert: false
             });
 
-            await fetch("http://localhost:8000/detector/dismiss", {
+            await fetch(`${(import.meta.env.VITE_API_URL || 'http://localhost:8000').replace(/\/+$/, '')}/detector/dismiss`, {
               method: "POST"
             });
             setTimeout(() => {
