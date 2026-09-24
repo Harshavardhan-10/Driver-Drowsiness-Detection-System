@@ -116,21 +116,21 @@ const Monitor = () => {
    * Reset detector state after an alert has been handled
    */
   const handleDismissAlert = async () => {
+    setDetectionData(prev => ({
+      ...prev,
+      score: 0,
+      status: "NORMAL",
+      yawns: 0,
+      alert: false
+    }));
+
     try {
       await fetch(
-        "http://localhost:8000/detector/dismiss",
+        "http://localhost:8000/detector/reset",
         {
           method: "POST"
         }
       );
-
-      setDetectionData(prev => ({
-        ...prev,
-        score: 0,
-        status: "NORMAL",
-        yawns: 0
-      }));
-
     } catch (error) {
       console.error(error);
     }
